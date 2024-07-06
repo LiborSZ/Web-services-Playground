@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using SoapCore;
+using System.ServiceModel;
 using System.Text;
 using WebApiData;
+using static Web_API_playground.Services.CalculatorSerice.CalculatorService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +32,19 @@ builder.Services.AddAuthentication(x =>
     };
 });
 
+// Soap calculator injection config
+builder.Services.AddSoapCore();
+// Získat adresu služby z konfigurace
+string soapServiceUrl = builder.Configuration["AppSettings:SoapServiceUrl"];
+builder.Services.AddSingleton<IcalculatorService, CalculatorServices>();
+
+// Pøidat singleton pro CalculatorServiceClient
+builder.Services.AddSingleton<CalculatorServiceClient>(provider =>
+{
+    BasicHttpBinding binding = new BasicHttpBinding();
+    EndpointAddress endpoint = new EndpointAddress(soapServiceUrl);
+    return new CalculatorServiceClient(binding, endpoint);
+});
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -48,5 +64,7 @@ app.UseAuthorization();
 app.UseHttpsRedirection();
 
 app.MapControllers();
+
+app.UseSoapEndpoint<IcalculatorService>("/CalculatorService.svc", new SoapEncoderOptions());
 
 app.Run();
