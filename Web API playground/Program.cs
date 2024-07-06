@@ -14,7 +14,9 @@ builder.Services.AddDbContext<ApiDbContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Configure JWT authentication
-var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"]);
+var key = builder.Configuration["Jwt:Key"] ?? "default_key";
+byte[] bytes = Encoding.ASCII.GetBytes(key);
+
 builder.Services.AddAuthentication(x =>
 {
     x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -26,7 +28,7 @@ builder.Services.AddAuthentication(x =>
     x.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
+        IssuerSigningKey = new SymmetricSecurityKey(bytes),
         ValidateIssuer = false,
         ValidateAudience = false
     };
@@ -34,11 +36,11 @@ builder.Services.AddAuthentication(x =>
 
 // Soap calculator injection config
 builder.Services.AddSoapCore();
-// Získat adresu služby z konfigurace
-string soapServiceUrl = builder.Configuration["AppSettings:SoapServiceUrl"];
+// Get service address from appsettings.json
+string? soapServiceUrl = builder.Configuration["AppSettings:SoapServiceUrl"];
 builder.Services.AddSingleton<IcalculatorService, CalculatorServices>();
 
-// Pøidat singleton pro CalculatorServiceClient
+// Soap calculator service
 builder.Services.AddSingleton<CalculatorServiceClient>(provider =>
 {
     BasicHttpBinding binding = new BasicHttpBinding();
